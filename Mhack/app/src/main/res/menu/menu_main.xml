@@ -3,8 +3,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="edu.umich.mhack.MainActivity">
     <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:title="@string/action_settings"
-        app:showAsAction="never" />
+        android:title="Start"
+        android:orderInCategory="101"
+        android:icon="@android:drawable/btn_star_big_on"
+        android:id="@+id/start_cam" />
+    <item
+        android:title="Get Service"
+        android:orderInCategory="102"
+        android:id="@+id/Service" />
 </menu>
