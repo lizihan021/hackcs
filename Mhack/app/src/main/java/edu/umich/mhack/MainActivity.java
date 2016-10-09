@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.SensorManager;
 import android.location.*;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -63,6 +65,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.HashMap;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -87,6 +90,10 @@ public class MainActivity extends AppCompatActivity {
     private float degree;
     private final String DEBUG_TAG   = "Activity01";
     private int yes = 0;
+    private HashMap<Integer, Integer> soundPoolMap;
+    private SoundPool soundPool;
+    private boolean flag = true;
+    private boolean deamon = true;
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.
      * See https://g.co/AppIndexing/AndroidStudio for more information.
@@ -127,6 +134,11 @@ public class MainActivity extends AppCompatActivity {
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
 
+        soundPool = new SoundPool(4, AudioManager.STREAM_MUSIC, 100);
+        soundPoolMap = new HashMap<Integer, Integer>();
+        soundPoolMap.put(1, soundPool.load(this, R.raw.yo, 1));
+
+
         button.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -140,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } catch (SecurityException e) {
                 }
+                playSound(1, 0);
                 yes = shoot(jingdu1, weidu1);
             }
         });
@@ -148,49 +161,42 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 while(true) {
-                    try {
-                        Socket socket = null;
-                        InetAddress serverAddr = InetAddress.getByName("52.40.173.239");
-                        socket = new Socket(serverAddr, 54321);
+                        try {
+                            Socket socket = null;
+                            InetAddress serverAddr = InetAddress.getByName("52.40.173.239");
+                            socket = new Socket(serverAddr, 54321);
 
-                PrintWriter out1 = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
-         //       PrintWriter out2 = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
-         //       PrintWriter out3 = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
-                out1.println(longitude + "yoyo");
-         //       out2.println(latitude + "");
-         //       out3.println(yes + "");*/
-                BufferedReader br1 = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                String msg1 = br1.readLine();/*
-                BufferedReader br2 = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                String msg2 = br2.readLine();
-                BufferedReader br3 = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                String msg3 = br3.readLine();*/
+                            PrintWriter out1 = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
+                            out1.println(longitude + " " + latitude + " " + yes);
 
-                txtToChange = (TextView) findViewById(R.id.textView3);
-                txtToChange.setText(msg1);
-                /*if ( msg1 != null )
-                    jingdu1 = Double.parseDouble(msg1);*/
-                /*
-                if ( msg2 != null )
-                    weidu1 = Double.parseDouble(msg2);
+                            BufferedReader br1 = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                            String tmp = br1.readLine();
 
-                if ( msg3 != null && Integer.parseInt(msg3) == 1) {
-                    txtToChange = (TextView) findViewById(R.id.textView3);
-                    txtToChange.setText("yo, you are dead!");
-                    try{Thread.sleep(5000);}
-                    catch(InterruptedException ex){}
-                }
-                */
-                        //关闭流
+                            String[] arrays = tmp.split(" ");
+                            if (arrays[0] != null)
+                                jingdu1 = Double.parseDouble(arrays[0]);
 
-                        br1.close(); //br2.close(); br3.close();
-                        out1.close(); //out2.close(); out3.close();
-                        //关闭Socket
-                        socket.close();
-                    } catch (Exception e) {
-                        // TODO: handle exception
-                        Log.e(DEBUG_TAG, e.toString());
-                    }
+                            if (arrays[1] != null)
+                                weidu1 = Double.parseDouble(arrays[1]);
+
+                            if (arrays[2] != null && Integer.parseInt(arrays[2]) == 1) {
+                                txtToChange = (TextView) findViewById(R.id.textView3);
+                                txtToChange.setText("yo, you are dead!");
+                                button.setActivated(false);
+                                flag = false;
+                                break;
+                            }
+                            //关闭流
+
+                            br1.close();
+                            out1.close();
+                            //关闭Socket
+                            socket.close();
+                        } catch (Exception e) {
+                            // TODO: handle exception
+                            Log.e(DEBUG_TAG, e.toString());
+                        }
+
                     try {
                         Thread.sleep(500);
                     } catch (InterruptedException ex) {
@@ -201,34 +207,48 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void playSound(int sound, int loop) {
+        AudioManager mgr = (AudioManager)this.getSystemService(Context.AUDIO_SERVICE);
+        float streamVolumeCurrent = mgr.getStreamVolume(AudioManager.STREAM_MUSIC);
+        float streamVolumeMax = mgr.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        float volume = streamVolumeCurrent/streamVolumeMax;
+        soundPool.play(soundPoolMap.get(sound), volume, volume, 1, loop, 1f);
+
+        //参数：1、Map中取值   2、当前音量     3、最大音量  4、优先级   5、重播次数   6、播放速度
+    }
+
     private int shoot(double jing1, double wei1)
     {
-        double dx = jing1 - longitude;
-        double dy = wei1 - latitude;
-        float angel = 0;
-        if(dy > 0 && dx > 0)
-            angel = (float)Math.toDegrees(Math.atan(dx/dy));
-        else if(dy < 0 && dx > 0)
-            angel = (float)Math.toDegrees(Math.atan(dx/dy)) + 180;
-        else if(dy > 0 && dx < 0)
-            angel = (float)Math.toDegrees(Math.atan(dx/dy)) + 360;
-        else if(dy < 0 && dx < 0)
-            angel = (float)Math.toDegrees(Math.atan(dx/dy)) + 180;
-        else if(dx == 0 && dy == 0)
-            return 1;
-        else if(dx == 0)
-            angel = 0;
-        else if(dy == 0 && dx > 0)
-            angel = 90;
-        else
-            angel = 270;
+        if(flag) {
+            double dx = jing1 - longitude;
+            double dy = wei1 - latitude;
+            float angel = 0;
+            if (dy > 0 && dx > 0)
+                angel = (float) Math.toDegrees(Math.atan(dx / dy));
+            else if (dy < 0 && dx > 0)
+                angel = (float) Math.toDegrees(Math.atan(dx / dy)) + 180;
+            else if (dy > 0 && dx < 0)
+                angel = (float) Math.toDegrees(Math.atan(dx / dy)) + 360;
+            else if (dy < 0 && dx < 0)
+                angel = (float) Math.toDegrees(Math.atan(dx / dy)) + 180;
+            else if (dx == 0 && dy == 0)
+                return 1;
+            else if (dx == 0)
+                angel = 0;
+            else if (dy == 0 && dx > 0)
+                angel = 90;
+            else
+                angel = 270;
 
-        txtToChange = (TextView) findViewById(R.id.textView3);
-        String out = "yo, " + angel;
-        txtToChange.setText(out);
+            txtToChange = (TextView) findViewById(R.id.textView1);
+            String out = "yo, angle" + (angel - degree);
+            txtToChange.setText(out);
 
-        if (Math.abs(angel - degree) < 3)
-            return 1;
+            if (Math.abs(angel - degree) < 20)
+                return 1;
+            else
+                return 0;
+        }
         else
             return 0;
     }
@@ -249,10 +269,6 @@ public class MainActivity extends AppCompatActivity {
 
         public void onSensorChanged(SensorEvent event) {
             degree = event.values[0];// 数组中的第一个数是方向值
-            txtToChange = (TextView) findViewById(R.id.textView1);
-            String out = "yo, " + degree;
-            txtToChange.setText(out);
-
         }
 
         public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -283,9 +299,6 @@ public class MainActivity extends AppCompatActivity {
                 latitude = location.getLatitude(); //经度
                 longitude = location.getLongitude(); //纬度
             }
-            txtToChange = (TextView) findViewById(R.id.textView3);
-            String out = "yo, " + latitude + ", " + longitude;
-            txtToChange.setText(out);
         }
     };
 
@@ -308,25 +321,6 @@ public class MainActivity extends AppCompatActivity {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        if (id == R.id.Service) {
-            try {
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
-                Location location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                if (location != null) {
-                    latitude = location.getLatitude(); //经度
-                    longitude = location.getLongitude(); //纬度
-                }
-            } catch (SecurityException e) {
-            }
-
-            txtToChange = (TextView) findViewById(R.id.textView3);
-            String out = "yo, " + latitude + ", " + longitude;
-            txtToChange.setText(out);
-
-            return true;
-        }
 
         return super.onOptionsItemSelected(item);
     }
